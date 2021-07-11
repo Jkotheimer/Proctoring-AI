@@ -8,7 +8,6 @@ Created on Wed Jul 29 19:47:08 2020
 import cv2
 import numpy as np
 import tensorflow as tf
-from tensorflow import keras
 
 '''
 Get the facial landmark model. 
@@ -18,8 +17,7 @@ Original repository: https://github.com/yinguobing/cnn-facial-landmark
 @return (tf model) model - Facial landmarks model
 '''
 def getLandmarkModel(savedModel='models/pose_model'):
-    model = tf.saved_model.load(savedModel)
-    return model
+    return tf.saved_model.load(savedModel)
 
 '''Get a square box out of the given box, by expanding it.'''
 def getSquareBox(box):
