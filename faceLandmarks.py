@@ -82,12 +82,8 @@ def detectMarks(img, model, face):
     if faceBox[3] > h:
         faceBox[3] = h
     
-    faceImg = img[faceBox[1]: faceBox[3],
-                faceBox[0]: faceBox[2]]
-    try:
-        faceImg = cv2.resize(faceImg, (128, 128))
-    except:
-        print('resizing failed')
+    faceImg = img[faceBox[1]: faceBox[3], faceBox[0]: faceBox[2]]
+    faceImg = cv2.resize(faceImg, (128,128))
     faceImg = cv2.cvtColor(faceImg, cv2.COLOR_BGR2RGB)
     
     # # Actual detection.
