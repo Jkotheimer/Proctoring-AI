@@ -7,14 +7,18 @@ Cloned from https://github.com/vardanagarwal/Proctoring-AI
 '''
 import cv2
 import time
+import sys
 from faceDetector import getFaceDetector, findFace, drawFace
 from faceLandmarks import getLandmarkModel, detectMarks
 from eyeTracker import getEyes, getEyesFast
 
 # Start capturing video
-
 cap = cv2.VideoCapture(0)
-cv2.namedWindow('preview')
+#cv2.namedWindow('preview')
+
+args = {
+    'fast': fast
+}
 
 while(True):
     tstamp = time.time() * 1000
@@ -47,22 +51,21 @@ while(True):
     # [(left x, y, z), (right x, y, z)]
     #eyes = getEyes(shape)
     eyes = getEyesFast(face)
+    print(eyes)
 
+    # THIS BLOCK IS FOR DEBUGGING REASONS
+    # -----------------------------------------------------------
     duration = (time.time() * 1000) - tstamp
     print('eye pinpointing took {} ms'.format(round(duration, 2)))
     tstamp = time.time() * 1000
-
-    # Draw circles around each eye (take this out in prod)
-    print(eyes)
-    cv2.circle(img, (eyes[0][0], eyes[0][1]), 4, (0, 0, 255), 2)
-    cv2.circle(img, (eyes[1][0], eyes[1][1]), 4, (0, 0, 255), 2)
-    drawFace(img, face)
-
-    cv2.imshow('preview', img)
-
-    duration = (time.time() * 1000) - tstamp
-    print('displaying took {} ms'.format(round(duration, 2)))
-    tstamp = time.time() * 1000
+    #cv2.circle(img, (eyes[0][0], eyes[0][1]), 4, (0, 0, 255), 2)
+    #cv2.circle(img, (eyes[1][0], eyes[1][1]), 4, (0, 0, 255), 2)
+    #drawFace(img, face)
+    #cv2.imshow('preview', img)
+    #duration = (time.time() * 1000) - tstamp
+    #print('displaying took {} ms'.format(round(duration, 2)))
+    #tstamp = time.time() * 1000
+    # -----------------------------------------------------------
 
     # Terminate when 'q' is pressed
     if cv2.waitKey(1) & 0xFF == ord('q'):
