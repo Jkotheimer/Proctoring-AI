@@ -1,13 +1,17 @@
-# -*- coding: utf-8 -*-
 '''
 Cloned from https://github.com/vardanagarwal/Proctoring-AI
 
 @author Jack Kotheimer
 @date 2021-07-11
 '''
+
+import json
 import numpy as np
+from FaceLandmarks import getLandmarkModel, detectMarks
 
 '''
+getEye
+------
 Create ROI on mask of the size of eyes and also find the extreme points of each eye
 
 @param (list<int>) side - The facial landmark numbers of eyes
@@ -29,27 +33,66 @@ def getEye(side, shape):
 def getDistanceBetweenEyes(eyeWidth):
     return 1300/eyeWidth;
 
- # These magic numbers were here when I got here. Don't ask me, just accept it
-left = [36, 37, 38, 39, 40, 41]
-right = [42, 43, 44, 45, 46, 47]
+'''
+getEyes
+-------
+Retreive the pixel locations of both eyes on a face
 
-def getEyes(shape):
+@param face (uint8_t[]): [left, top, right, bottom] edges of the face. This is just a square region, in which the face resides
+@param fast (bool): Use the fast algorithm to save time at the expense of accuracy
+@param model (optional)(string): path/to/model.file only used if fast == False, a default is provided in FaceLandmarks.py
+
+@returns eyes (tuple(x,y,z)[]): [(lx,ly,lz), (rx,ry,rz)] coordinates 
+'''
+def getEyes(face, cam, fast, model):
+    print('Fast: {}'.format(fast))
+
+    if fast:
+        return getEyesFast(face)
+
+    # Get the most important landmarks of the face
+    shape = detectMarks(img, getLandmarkModel(model), face)
+
+    # These magic numbers were here when I got here. Don't ask me, just accept it
+    leftMagic = [36, 37, 38, 39, 40, 41]
+    rightMagic = [42, 43, 44, 45, 46, 47]
 
     # Get arrays describing the edges of each eye : [rightX, topY, leftX, bottomY]
-    endPointsLeft = getEye(left, shape)
-    endPointsRight = getEye(right, shape)
+    endPointsLeft = getEye(leftMagic, shape)
+    endPointsRight = getEye(rightMagic, shape)
 
     # Take an average of the position of each edge to locate the center of each eye
-    leftX = int((endPointsLeft[0] + endPointsLeft[2]) / 2)
-    leftY = int((endPointsLeft[1] + endPointsLeft[3]) / 2)
-    rightX = int((endPointsRight[0] + endPointsRight[2]) / 2)
-    rightY = int((endPointsRight[1] + endPointsRight[3]) / 2)
+    Lx = int((endPointsLeft[0] + endPointsLeft[2]) / 2)
+    Ly = int((endPointsLeft[1] + endPointsLeft[3]) / 2)
+    Rx = int((endPointsRight[0] + endPointsRight[2]) / 2)
+    Ry = int((endPointsRight[1] + endPointsRight[3]) / 2)
 
     # Get an estimated distance from the camera, based on the distance between the eyes
-    z = int(getDistanceBetweenEyes(rightX - leftX));
+    z = int(getDistanceBetweenEyes(Rx - Lx));
 
-    return [(leftX, leftY, z), (rightX, rightY, z)]
+    return [(Lx, Ly, z), (Rx, Ry, z)]
+'''
+Instead of describing the math, lemme give you a visual...
 
+         Lx    Rx   1/4 and 3/4 width (relatively where the eyes are, width wise, on the face)
+         |_____|___/
+         |     |
+         |     |
+     |---|-----|----|
+     |   |     |    |
+     |   |     |    |
+     |   x-----x----------y - 5/12 height (relatively where the eyes are, height wise, on the face)
+     |              |
+     |      <       | <-----face box
+     |              |
+     |    \____/    |
+     |              |
+     |______________|
+
+*** This is meant to be barely accurate, yet fast as hell ***
+*** If you're wondering how I came up with these numbers, I just looked at my face at tweaked it until it looked correct lol ***
+
+'''
 def getEyesFast(face):
     # face: [left, top, right, bottom]
     #       [+x, +y, -x, -y]
@@ -58,8 +101,12 @@ def getEyesFast(face):
     right = face[2]
     bottom = face[3]
 
+    Lx = int(left + ((right - left) / 4))
+    Rx = int(right - ((right - left) / 4))
     y = int(top + ((bottom - top) * 5 / 12))
-    lx = int(left + ((right - left) / 4))
-    rx = int(right - ((right - left) / 4))
-    z = int(getDistanceBetweenEyes(rx - lx));
-    return [(lx, y, z), (rx, y, z)]
+    z = int(getDistanceBetweenEyes(Rx - Lx));
+    return [(Lx, y, z), (Rx, y, z)]
+
+def drawEyes(img, eyes):
+    cv2.circle(img, (eyes[0][0], eyes[0][1]), 4, (0, 0, 255), 2)
+    cv2.circle(img, (eyes[1][0], eyes[1][1]), 4, (0, 0, 255), 2)
