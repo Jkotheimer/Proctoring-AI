@@ -7,41 +7,33 @@ Cloned from https://github.com/vardanagarwal/Proctoring-AI
 import cv2
 import time
 import sys
+import json
 import os.path
-import configparser
 from FaceDetector import getFaceDetector, findFace, drawFace
-from EyeTracker import getEyes
-
-def help():
-    print('Valid arguments (python SmartVisor.py <arg>)')
-    print('  DEBUG_0: Debug the program with all debugging info, including video preview')
-    print('  DEBUG_1: Debug the program with text debugging info only')
-    print('  PROD:    Run this program as a production ready product')
-    exit(1)
+from EyeTracker import getEyes, getEyesFast, drawEyes
+from utils import debugTime
 
 # ---------------------------------------------------
 # CONFIG
 # ---------------------------------------------------
-if len(sys.argv) != 2:
-    print('ERROR: Exactly one argument required')
-    help()
+configFilename = 'config/config.json'
+with open(configFilename) as configFile:
+    config = json.load(configFile)
 
-configFilename = 'config/config.ini'
-config = configparser.ConfigParser()
-config.read(configFilename)
-if len(config.sections()) == 0:
-    print('ERROR: config file {} invalid or not found'.format(configFilename))
-    exit(2)
+with open(config['camera']) as camLocationFile:
+    cameraLocation = json.load(camLocationFile)
 
-env = sys.argv[1]
-fast = config[env].getboolean('fast')
-debug = config[env].getboolean('debug')
-display = config[env].getboolean('display')
+with open(config['windshield']) as wsLocationFile:
+    windshieldLocation = json.load(wsLocationFile)
+
+print(config)
+print(cameraLocation)
+print(windshieldLocation)
 
 # Start capturing video
 cap = cv2.VideoCapture(0)
 
-if display:
+if config['display']:
     cv2.namedWindow('preview')
 
 # ---------------------------------------------------
@@ -70,50 +62,47 @@ def run():
         if not ret:
             print('IMAGE NOT CAPTURED')
             continue
-        if debug:
-            duration = (time.time() * 1000) - tstamp
-            print('image capture took {} ms'.format(round(duration, 4)))
-            tstamp = time.time() * 1000
+        if config['debug']:
+            print('----------------------------')
+            print('     ACTION     | DURATION ')
+            print('----------------------------')
+            tstamp = debugTime('Image Capture', tstamp, time.time() * 1000)
         # -----------------------------------
         # Get a square region around the face
         # -----------------------------------
         face = findFace(img, getFaceDetector())
         if len(face) == 0:
-            print('FACE NOT DETECTED')
+            print('FACE NOT FOUND')
             continue
-        if debug:
-            duration = (time.time() * 1000) - tstamp
-            print('face detection took {} ms'.format(round(duration, 2)))
-            tstamp = time.time() * 1000
+
+        if config['debug']:
+            tstamp = debugTime('Face Detection', tstamp, time.time() * 1000)
         # ----------------------------------  
         # Determine the location of each eye
         # ----------------------------------
-        eyes = getEyes(face, fast) # [(Lx, Ly, Lz), (Rx, Ry, Rz)]
-        if debug:
-            duration = (time.time() * 1000) - tstamp
-            print('face detection took {} ms'.format(round(duration, 2)))
-            tstamp = time.time() * 1000
+        if config['fast']:
+            eyes = getEyesFast(face)
+        else:
+            eyes = getEyes(img, face, 'models/pose_model') # [(Lx, Ly, Lz), (Rx, Ry, Rz)]
+        if config['debug']:
+            tstamp = debugTime('Eye Detection', tstamp, time.time() * 1000)
     
-        # THIS BLOCK IS FOR DEBUGGING REASONS
-        # -----------------------------------------------------------
-        duration = (time.time() * 1000) - tstamp
-        print('eye pinpointing took {} ms'.format(round(duration, 2)))
-        tstamp = time.time() * 1000
-        drawFace(img, face)
-        drawEyes(img, face)
-        #cv2.imshow('preview', img)
-        #duration = (time.time() * 1000) - tstamp
-        #print('displaying took {} ms'.format(round(duration, 2)))
-        #tstamp = time.time() * 1000
-        # -----------------------------------------------------------
+        if config['display']:
+            drawFace(img, face)
+            drawEyes(img, eyes)
+            cv2.imshow('preview', img)
+            if config['debug']:
+                tstamp = debugTime('Image Display', tstamp, time.time() * 1000)
     
         # Terminate when 'q' is pressed
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        key = cv2.waitKey(1) & 0xFF
+        if key == ord('q'):
             break
-        elif cv2.waitKey(1) & 0xFF == ord('f'):
-            config[env]['fast'] = 'no' if fast else 'yes'
+        elif key == ord('f'):
+            print('FAST!!!!!!!')
+            config['fast'] = not config['fast']
             with open(configFilename, 'w') as configFile:
-                config.write(configFile)
+                json.dump(config, configFile)
 
     
     # Gracefully exit
