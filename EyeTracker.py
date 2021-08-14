@@ -5,6 +5,7 @@ Cloned from https://github.com/vardanagarwal/Proctoring-AI
 @date 2021-07-11
 '''
 
+import cv2
 import json
 import numpy as np
 from FaceLandmarks import getLandmarkModel, detectMarks
@@ -12,8 +13,6 @@ from FaceLandmarks import getLandmarkModel, detectMarks
 '''
 getEye
 ------
-Create ROI on mask of the size of eyes and also find the extreme points of each eye
-
 @param (list<int>) side - The facial landmark numbers of eyes
 @param (list<uint32>) shape - Facial landmarks
 @return (np.uint8[]) mask - Mask with region of interest drawn
@@ -29,10 +28,6 @@ def getEye(side, shape):
     bottom = (points[4][1]+points[5][1])//2
     return [left, top, right, bottom]
 
-# This is currently based off me measuring distances with a measuring tape while staring at the camera
-def getDistanceBetweenEyes(eyeWidth):
-    return 1300/eyeWidth;
-
 '''
 getEyes
 -------
@@ -44,11 +39,7 @@ Retreive the pixel locations of both eyes on a face
 
 @returns eyes (tuple(x,y,z)[]): [(lx,ly,lz), (rx,ry,rz)] coordinates 
 '''
-def getEyes(face, cam, fast, model):
-    print('Fast: {}'.format(fast))
-
-    if fast:
-        return getEyesFast(face)
+def getEyes(img, face, model):
 
     # Get the most important landmarks of the face
     shape = detectMarks(img, getLandmarkModel(model), face)
@@ -71,6 +62,8 @@ def getEyes(face, cam, fast, model):
     z = int(getDistanceBetweenEyes(Rx - Lx));
 
     return [(Lx, Ly, z), (Rx, Ry, z)]
+
+
 '''
 Instead of describing the math, lemme give you a visual...
 
@@ -106,6 +99,10 @@ def getEyesFast(face):
     y = int(top + ((bottom - top) * 5 / 12))
     z = int(getDistanceBetweenEyes(Rx - Lx));
     return [(Lx, y, z), (Rx, y, z)]
+
+# This is currently based off me measuring distances with a measuring tape while staring at the camera
+def getDistanceBetweenEyes(eyeWidth):
+    return 1300/eyeWidth;
 
 def drawEyes(img, eyes):
     cv2.circle(img, (eyes[0][0], eyes[0][1]), 4, (0, 0, 255), 2)
