@@ -67,6 +67,7 @@ def run():
             print('     ACTION     | DURATION ')
             print('----------------------------')
             tstamp = debugTime('Image Capture', tstamp, time.time() * 1000)
+
         # -----------------------------------
         # Get a square region around the face
         # -----------------------------------
@@ -74,19 +75,27 @@ def run():
         if len(face) == 0:
             print('FACE NOT FOUND')
             continue
-
         if config['debug']:
             tstamp = debugTime('Face Detection', tstamp, time.time() * 1000)
+
         # ----------------------------------  
         # Determine the location of each eye
         # ----------------------------------
         if config['fast']:
-            eyes = getEyesFast(face)
+            eyesPixelLocations = getEyesFast(face)
         else:
-            eyes = getEyes(img, face, 'models/pose_model') # [(Lx, Ly, Lz), (Rx, Ry, Rz)]
+            eyesPixelLocations = getEyes(img, face, 'models/pose_model') # [(Lx, Ly, Lz), (Rx, Ry, Rz)]
         if config['debug']:
             tstamp = debugTime('Eye Detection', tstamp, time.time() * 1000)
+
+        # -----------------------------------------------
+        # Convert the eye pixel locations to coordinates
+        # -----------------------------------------------
+
     
+        # -------------------------------
+        # Display the image if indicated
+        # ------------------------------
         if config['display']:
             drawFace(img, face)
             drawEyes(img, eyes)
